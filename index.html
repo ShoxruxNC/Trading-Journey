@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeVault — Trading Journal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg-primary:#ffffff;--bg-secondary:#f5f5f4;--bg-tertiary:#f0efec;
+    --text-primary:#1a1a18;--text-secondary:#6b6b68;--text-tertiary:#9b9b97;
+    --border:rgba(0,0,0,0.12);--border-md:rgba(0,0,0,0.2);
+    --radius-md:8px;--radius-lg:12px;
+    --green:#1D9E75;--green-dark:#0F6E56;--green-bg:#E1F5EE;--green-text:#0F6E56;
+    --red:#E24B4A;--red-bg:#FCEBEB;--red-text:#A32D2D;
+    --blue:#378ADD;--blue-bg:#E6F1FB;--blue-text:#185FA5;
+    --amber:#EF9F27;--amber-bg:#FAEEDA;--amber-text:#854F0B;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg-primary:#1e1e1c;--bg-secondary:#2a2a28;--bg-tertiary:#161614;
+      --text-primary:#f0efe8;--text-secondary:#a0a09a;--text-tertiary:#6b6b68;
+      --border:rgba(255,255,255,0.1);--border-md:rgba(255,255,255,0.2);
+      --green-bg:#04342C;--green-text:#5DCAA5;
+      --red-bg:#501313;--red-text:#F09595;
+      --blue-bg:#042C53;--blue-text:#85B7EB;
+      --amber-bg:#412402;--amber-text:#FAC775;
+    }
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-tertiary);min-height:100vh;color:var(--text-primary)}
+  .app{display:flex;flex-direction:column;min-height:100vh}
+
+  /* Header */
+  .header{background:var(--bg-primary);border-bottom:0.5px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .logo{font-size:18px;font-weight:600;letter-spacing:-0.5px}
+  .logo span{color:var(--green)}
+  .nav{display:flex;gap:4px}
+  .nav-btn{padding:6px 14px;border:none;background:transparent;border-radius:var(--radius-md);font-size:13px;cursor:pointer;color:var(--text-secondary);font-family:inherit;transition:all 0.15s}
+  .nav-btn:hover{background:var(--bg-secondary)}
+  .nav-btn.active{background:var(--bg-secondary);color:var(--text-primary);font-weight:500}
+  .add-btn{background:var(--green);color:#fff;border:none;padding:7px 16px;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 0.15s}
+  .add-btn:hover{background:var(--green-dark)}
+
+  /* Layout */
+  .main{display:flex;flex:1}
+  .sidebar{width:210px;background:var(--bg-primary);border-right:0.5px solid var(--border);padding:16px 12px;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+  .content{flex:1;overflow-y:auto;padding:20px;max-width:1100px}
+
+  /* Sidebar */
+  .sidebar-section{margin-bottom:20px}
+  .sidebar-label{font-size:11px;font-weight:500;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.8px;padding:0 8px;margin-bottom:6px}
+  .sidebar-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius-md);cursor:pointer;font-size:13px;color:var(--text-secondary);transition:all 0.12s;user-select:none}
+  .sidebar-item:hover{background:var(--bg-secondary)}
+  .sidebar-item.active{background:var(--bg-secondary);color:var(--text-primary);font-weight:500}
+  .sidebar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+  /* Metrics */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .metric{background:var(--bg-primary);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px}
+  .metric-label{font-size:12px;color:var(--text-secondary);margin-bottom:6px}
+  .metric-value{font-size:22px;font-weight:500}
+  .metric-sub{font-size:12px;margin-top:4px;color:var(--text-tertiary)}
+  .up{color:var(--green)}.down{color:var(--red)}
+
+  /* Cards */
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+  .card{background:var(--bg-primary);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px}
+  .card-title{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--text-secondary)}
+
+  /* Table */
+  .table-card{background:var(--bg-primary);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:20px}
+  .table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:0.5px solid var(--border)}
+  .table-title{font-size:13px;font-weight:500}
+  .filter-row{display:flex;gap:6px}
+  .filter-chip{padding:4px 10px;border-radius:20px;font-size:12px;border:0.5px solid var(--border-md);cursor:pointer;background:transparent;color:var(--text-secondary);font-family:inherit;transition:all 0.12s}
+  .filter-chip:hover{background:var(--bg-secondary)}
+  .filter-chip.active{background:var(--blue-bg);color:var(--blue-text);border-color:transparent}
+  table{width:100%;border-collapse:collapse}
+  thead td{font-size:11px;font-weight:500;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.6px;padding:10px 18px}
+  tbody tr{border-top:0.5px solid var(--border);transition:background 0.1s;cursor:pointer}
+  tbody tr:hover{background:var(--bg-secondary)}
+  tbody td{padding:12px 18px;font-size:13px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-long{background:var(--green-bg);color:var(--green-text)}
+  .badge-short{background:var(--red-bg);color:var(--red-text)}
+  .badge-win{background:var(--green-bg);color:var(--green-text)}
+  .badge-loss{background:var(--red-bg);color:var(--red-text)}
+  .badge-open{background:var(--blue-bg);color:var(--blue-text)}
+
+  /* Modal */
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--bg-primary);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:95vw;border:0.5px solid var(--border-md);max-height:90vh;overflow-y:auto}
+  .modal-title{font-size:16px;font-weight:500;margin-bottom:18px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-group.full{grid-column:1/-1}
+  .form-group label{font-size:12px;color:var(--text-secondary)}
+  .form-group input,.form-group select,.form-group textarea{font-size:13px;font-family:inherit;border-radius:var(--radius-md);padding:8px 10px;border:0.5px solid var(--border-md);background:var(--bg-secondary);color:var(--text-primary);outline:none;transition:border 0.15s}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--green)}
+  .form-group textarea{resize:vertical;min-height:70px}
+  .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  .btn-cancel{padding:8px 16px;border:0.5px solid var(--border-md);border-radius:var(--radius-md);background:transparent;cursor:pointer;font-size:13px;color:var(--text-secondary);font-family:inherit}
+  .btn-cancel:hover{background:var(--bg-secondary)}
+  .btn-save{padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit}
+  .btn-save:hover{background:var(--green-dark)}
+
+  /* AI */
+  .ai-card{background:var(--bg-primary);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:20px}
+  .ai-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .ai-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .ai-insights{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .insight-item{background:var(--bg-secondary);border-radius:var(--radius-md);padding:12px;border-left:3px solid}
+  .insight-item.good{border-color:var(--green)}
+  .insight-item.warn{border-color:var(--amber)}
+  .insight-item.info{border-color:var(--blue)}
+  .insight-label{font-size:11px;color:var(--text-tertiary);margin-bottom:4px}
+  .insight-text{font-size:12px;line-height:1.5}
+
+  /* P&L bars */
+  .pnl-bar-row{display:flex;align-items:flex-end;gap:4px;height:80px}
+  .pnl-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center}
+  .pnl-bar{width:100%;border-radius:2px 2px 0 0;min-height:4px;transition:height 0.3s}
+  .pnl-day-label{font-size:10px;color:var(--text-tertiary);margin-top:4px}
+
+  /* AI Chat */
+  .ai-chat-wrap{background:var(--bg-secondary);border-radius:var(--radius-lg);padding:12px;min-height:180px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto}
+  .chat-msg-user{align-self:flex-end;background:var(--blue-bg);color:var(--blue-text);padding:10px 14px;border-radius:12px 12px 2px 12px;font-size:13px;max-width:80%}
+  .chat-msg-ai{align-self:flex-start;background:var(--bg-primary);border:0.5px solid var(--border);padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13px;max-width:85%;line-height:1.6}
+  .chat-input-row{display:flex;gap:8px}
+  .chat-input{flex:1;padding:10px 12px;font-size:13px;border-radius:var(--radius-md);border:0.5px solid var(--border-md);background:var(--bg-secondary);color:var(--text-primary);font-family:inherit;outline:none}
+  .chat-input:focus{border-color:var(--green)}
+  .chat-send-btn{background:var(--green);color:#fff;border:none;padding:10px 18px;border-radius:var(--radius-md);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit}
+
+  /* Trade detail */
+  .trade-detail-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .detail-chip{background:var(--bg-secondary);border:0.5px solid var(--border);border-radius:var(--radius-md);padding:6px 12px;font-size:12px}
+  .detail-chip span{color:var(--text-tertiary);margin-right:4px}
+
+  /* Pages */
+  .page{display:none}
+  .page.active{display:block}
+
+  /* Stats grid */
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+
+  /* Empty state */
+  .empty{text-align:center;padding:40px;color:var(--text-tertiary);font-size:13px}
+
+  /* Responsive */
+  @media(max-width:768px){
+    .sidebar{display:none}
+    .metrics{grid-template-columns:1fr 1fr}
+    .charts-row,.stats-grid,.ai-insights{grid-template-columns:1fr}
+    .header{padding:0 12px}
+    .content{padding:12px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="logo">Trade<span>Vault</span></div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showPage('dashboard',this)">Dashboard</button>
+      <button class="nav-btn" onclick="showPage('journal',this)">Journal</button>
+      <button class="nav-btn" onclick="showPage('stats',this)">Statistika</button>
+      <button class="nav-btn" onclick="showPage('ai',this)">AI Tahlil</button>
+    </div>
+  </div>
+  <button class="add-btn" onclick="openModal()">+ Trade qo'shish</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Bozorlar</div>
+    <div class="sidebar-item active" onclick="setMarket('all',this)">
+      <div class="sidebar-dot" style="background:var(--text-tertiary)"></div> Hammasi
+    </div>
+    <div class="sidebar-item" onclick="setMarket('Forex',this)">
+      <div class="sidebar-dot" style="background:var(--blue)"></div> Forex
+    </div>
+    <div class="sidebar-item" onclick="setMarket('Crypto',this)">
+      <div class="sidebar-dot" style="background:var(--amber)"></div> Crypto
+    </div>
+    <div class="sidebar-item" onclick="setMarket('Stock',this)">
+      <div class="sidebar-dot" style="background:var(--green)"></div> Stocks
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Holat</div>
+    <div class="sidebar-item" onclick="toggleStatus('win',this)">
+      <div class="sidebar-dot" style="background:var(--green)"></div> Yutish
+    </div>
+    <div class="sidebar-item" onclick="toggleStatus('loss',this)">
+      <div class="sidebar-dot" style="background:var(--red)"></div> Yutqazish
+    </div>
+    <div class="sidebar-item" onclick="toggleStatus('open',this)">
+      <div class="sidebar-dot" style="background:var(--blue)"></div> Ochiq
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Statistika</div>
+    <div id="sb-stats" style="padding:8px;font-size:12px;color:var(--text-secondary);line-height:1.8"></div>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content">
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Jami P&L</div>
+      <div class="metric-value" id="m-pnl">$0</div>
+      <div class="metric-sub" id="m-pnl-sub">0 yutish / 0 yutqazish</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-value" id="m-wr">0%</div>
+      <div class="metric-sub" id="m-wl">0W / 0L</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Jami tradelar</div>
+      <div class="metric-value" id="m-total">0</div>
+      <div class="metric-sub" id="m-open-count">0 ochiq</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">O'rtacha R:R</div>
+      <div class="metric-value" id="m-rr">0</div>
+      <div class="metric-sub">Risk / Reward</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Haftalik P&L (oxirgi 7 kun)</div>
+      <div class="pnl-bar-row" id="pnl-bars"></div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;align-items:center">
+      <div class="card-title" style="align-self:flex-start">Win / Loss nisbati</div>
+      <canvas id="donut" width="140" height="140" role="img" aria-label="Win loss donut chart"></canvas>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:8px" id="donut-label">Hali trade yo'q</div>
+    </div>
+  </div>
+
+  <div class="ai-card">
+    <div class="ai-header">
+      <div class="ai-dot"></div>
+      <span style="font-size:13px;font-weight:500">AI Tahlil</span>
+      <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto">Tradelaringizga asoslangan</span>
+    </div>
+    <div class="ai-insights" id="ai-insights">
+      <div class="insight-item info"><div class="insight-label">Maslahat</div><div class="insight-text">Trade qo'shib boshlang, AI sizning uslubingizni tahlil qiladi</div></div>
+      <div class="insight-item warn"><div class="insight-label">Vaqt tahlili</div><div class="insight-text">Qaysi vaqtda ko'proq yutishingiz aniqlanadi</div></div>
+      <div class="insight-item good"><div class="insight-label">Kuchli tomonlar</div><div class="insight-text">Eng yaxshi ishlayotgan juftliklar shu yerda ko'rinadi</div></div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">So'nggi tradelar</div>
+      <div class="filter-row">
+        <button class="filter-chip active" onclick="filterTable('all',this)">Hammasi</button>
+        <button class="filter-chip" onclick="filterTable('win',this)">Yutish</button>
+        <button class="filter-chip" onclick="filterTable('loss',this)">Yutqazish</button>
+        <button class="filter-chip" onclick="filterTable('open',this)">Ochiq</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <td>Juftlik</td><td>Bozor</td><td>Yo'nalish</td><td>Kirish</td><td>Chiqish</td><td>P&L</td><td>R:R</td><td>Sana</td><td>Holat</td>
+        </tr></thead>
+        <tbody id="trade-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- JOURNAL -->
+<div id="page-journal" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:500">Trade jurnali</div>
+    <button class="add-btn" onclick="openModal()">+ Yangi trade</button>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">Barcha tradelar</div>
+      <div class="filter-row">
+        <button class="filter-chip active" onclick="filterJournal('all',this)">Hammasi</button>
+        <button class="filter-chip" onclick="filterJournal('Forex',this)">Forex</button>
+        <button class="filter-chip" onclick="filterJournal('Crypto',this)">Crypto</button>
+        <button class="filter-chip" onclick="filterJournal('Stock',this)">Stock</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <td>Juftlik</td><td>Bozor</td><td>Yo'nalish</td><td>Kirish</td><td>Chiqish</td><td>P&L</td><td>R:R</td><td>Sana</td><td>Holat</td><td>Izoh</td><td></td>
+        </tr></thead>
+        <tbody id="journal-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div id="page-stats" class="page">
+  <div class="metrics" style="margin-bottom:20px">
+    <div class="metric"><div class="metric-label">Eng yaxshi trade</div><div class="metric-value up" id="s-best">$0</div></div>
+    <div class="metric"><div class="metric-label">Eng yomon trade</div><div class="metric-value down" id="s-worst">$0</div></div>
+    <div class="metric"><div class="metric-label">O'rtacha yutish</div><div class="metric-value up" id="s-avg-win">$0</div></div>
+    <div class="metric"><div class="metric-label">O'rtacha yutqazish</div><div class="metric-value down" id="s-avg-loss">$0</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="card"><div class="card-title">Bozor bo'yicha tradelar</div><div style="position:relative;height:200px"><canvas id="marketChart" role="img" aria-label="Market distribution bar chart"></canvas></div></div>
+    <div class="card"><div class="card-title">Kümülatif P&L</div><div style="position:relative;height:200px"><canvas id="pnlLineChart" role="img" aria-label="Cumulative PnL line chart"></canvas></div></div>
+    <div class="card"><div class="card-title">Juftlik bo'yicha P&L</div><div style="position:relative;height:200px"><canvas id="pairChart" role="img" aria-label="PnL by pair chart"></canvas></div></div>
+    <div class="card"><div class="card-title">Long vs Short</div><div style="position:relative;height:200px"><canvas id="dirChart" role="img" aria-label="Long vs Short pie chart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- AI -->
+<div id="page-ai" class="page">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div class="ai-dot"></div>
+      <div style="font-size:15px;font-weight:500">AI Trading Kouchi</div>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Tradelaringiz haqida o'zbek tilida savol bering</p>
+    <div class="ai-chat-wrap" id="ai-chat">
+      <div class="chat-msg-ai">Salom! Men sizning trading kouchingizman. Tradelaringizni qo'shing va men sizga batafsil tahlil beraman. Qanday savol bor?</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="ai-input" type="text" placeholder="Masalan: Qaysi juftlikda ko'proq yutaman?" onkeydown="if(event.key==='Enter')askAI()">
+      <button class="chat-send-btn" onclick="askAI()">Yuborish</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Yangi trade qo'shish</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Juftlik *</label><input id="f-pair" type="text" placeholder="EUR/USD, BTC/USDT, AAPL..."></div>
+      <div class="form-group"><label>Bozor</label><select id="f-market"><option>Forex</option><option>Crypto</option><option>Stock</option></select></div>
+      <div class="form-group"><label>Yo'nalish</label><select id="f-dir"><option value="Long">Long (Sotib olish)</option><option value="Short">Short (Sotish)</option></select></div>
+      <div class="form-group"><label>Holat</label><select id="f-status"><option value="win">Yutish</option><option value="loss">Yutqazish</option><option value="open">Ochiq</option></select></div>
+      <div class="form-group"><label>Kirish narxi</label><input id="f-entry" type="number" step="any" placeholder="1.0854"></div>
+      <div class="form-group"><label>Chiqish narxi</label><input id="f-exit" type="number" step="any" placeholder="1.0920"></div>
+      <div class="form-group"><label>P&L ($)</label><input id="f-pnl" type="number" step="any" placeholder="+150 yoki -80"></div>
+      <div class="form-group"><label>Risk:Reward</label><input id="f-rr" type="number" step="0.1" placeholder="2.5"></div>
+      <div class="form-group"><label>Sana</label><input id="f-date" type="date"></div>
+      <div class="form-group"><label>Vaqt</label><input id="f-time" type="time"></div>
+      <div class="form-group full"><label>Izoh (setup, sabab...)</label><textarea id="f-notes" placeholder="Bu trade nima uchun kirdi? Qanday setup? Nima o'rgandim?"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Bekor qilish</button>
+      <button class="btn-save" onclick="saveTrade()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'tradevault_trades_v2';
+let trades = JSON.parse(localStorage.getItem(KEY) || '[]');
+let filterMarket = 'all';
+let filterStatus = null;
+let tableFilter = 'all';
+let journalFilter = 'all';
+let donutChart = null;
+let chartInstances = {};
+
+// Set today's date in form
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+document.getElementById('f-time').value = new Date().toTimeString().slice(0,5);
+
+function save(){localStorage.setItem(KEY,JSON.stringify(trades))}
+
+function openModal(){document.getElementById('modal').classList.add('show')}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+
+function saveTrade(){
+  const pair = document.getElementById('f-pair').value.trim();
+  if(!pair){alert('Juftlikni kiriting!');return}
+  trades.unshift({
+    id:Date.now(),
+    pair:pair.toUpperCase(),
+    market:document.getElementById('f-market').value,
+    dir:document.getElementById('f-dir').value,
+    status:document.getElementById('f-status').value,
+    entry:parseFloat(document.getElementById('f-entry').value)||0,
+    exit:parseFloat(document.getElementById('f-exit').value)||0,
+    pnl:parseFloat(document.getElementById('f-pnl').value)||0,
+    rr:parseFloat(document.getElementById('f-rr').value)||0,
+    notes:document.getElementById('f-notes').value,
+    date:document.getElementById('f-date').value,
+    time:document.getElementById('f-time').value
+  });
+  save();
+  closeModal();
+  ['f-pair','f-entry','f-exit','f-pnl','f-rr','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  updateAll();
+}
+
+function deleteTrade(id){
+  if(!confirm('Bu tradeni o\'chirish?')) return;
+  trades = trades.filter(t=>t.id!==id);
+  save();updateAll();
+}
+
+function getFiltered(){
+  return trades.filter(t=>{
+    if(filterMarket!=='all'&&t.market!==filterMarket) return false;
+    if(filterStatus&&t.status!==filterStatus) return false;
+    return true;
+  });
+}
+
+function updateAll(){
+  const ft = getFiltered();
+  updateMetrics(ft);
+  updateTable(ft);
+  updateJournal();
+  updateDonut(ft);
+  updatePnlBars(ft);
+  updateAIInsights(ft);
+  updateSidebarStats(ft);
+  updateStatMetrics();
+  const statsPage = document.getElementById('page-stats');
+  if(statsPage.classList.contains('active')) updateStatCharts();
+}
+
+function updateMetrics(ft){
+  const closed = ft.filter(t=>t.status!=='open');
+  const wins = ft.filter(t=>t.status==='win');
+  const losses = ft.filter(t=>t.status==='loss');
+  const opens = ft.filter(t=>t.status==='open');
+  const totalPnl = ft.reduce((s,t)=>s+t.pnl,0);
+  const wr = closed.length>0?Math.round(wins.length/closed.length*100):0;
+  const avgRR = ft.length>0?(ft.reduce((s,t)=>s+t.rr,0)/ft.length).toFixed(1):0;
+
+  const pnlEl = document.getElementById('m-pnl');
+  pnlEl.textContent=(totalPnl>=0?'+':'')+totalPnl.toFixed(0)+'$';
+  pnlEl.className='metric-value '+(totalPnl>=0?'up':'down');
+  document.getElementById('m-pnl-sub').textContent=wins.length+' yutish / '+losses.length+' yutqazish';
+  document.getElementById('m-wr').textContent=wr+'%';
+  document.getElementById('m-wl').textContent=wins.length+'W / '+losses.length+'L';
+  document.getElementById('m-total').textContent=ft.length;
+  document.getElementById('m-open-count').textContent=opens.length+' ochiq';
+  document.getElementById('m-rr').textContent=avgRR;
+}
+
+function updateSidebarStats(ft){
+  const wins=ft.filter(t=>t.status==='win').length;
+  const losses=ft.filter(t=>t.status==='loss').length;
+  const closed=wins+losses;
+  document.getElementById('sb-stats').innerHTML=
+    '<div>Jami: <b>'+ft.length+'</b></div>'+
+    '<div>Yutish: <b style="color:var(--green)">'+wins+'</b></div>'+
+    '<div>Yutqazish: <b style="color:var(--red)">'+losses+'</b></div>'+
+    '<div>Win rate: <b>'+(closed>0?Math.round(wins/closed*100):0)+'%</b></div>';
+}
+
+function renderRow(t, showDelete=false){
+  const pnlStr=(t.pnl>=0?'+':'')+t.pnl.toFixed(0)+'$';
+  const pnlClass=t.pnl>=0?'up':'down';
+  return `<tr>
+    <td style="font-weight:500">${t.pair}</td>
+    <td>${t.market}</td>
+    <td><span class="badge badge-${t.dir.toLowerCase()}">${t.dir}</span></td>
+    <td style="font-size:12px">${t.entry||'-'}</td>
+    <td style="font-size:12px">${t.exit||'-'}</td>
+    <td class="${pnlClass}" style="font-weight:500">${pnlStr}</td>
+    <td>${t.rr||'-'}</td>
+    <td style="font-size:12px;color:var(--text-tertiary)">${t.date||''}</td>
+    <td><span class="badge badge-${t.status}">${t.status==='win'?'Yutish':t.status==='loss'?'Yutqazish':'Ochiq'}</span></td>
+    ${showDelete?'<td style="font-size:12px;color:var(--text-tertiary);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+((t.notes||'').slice(0,30)+(t.notes&&t.notes.length>30?'...':''))+'</td><td><button onclick="deleteTrade('+t.id+')" style="border:none;background:none;color:var(--red);cursor:pointer;font-size:13px">✕</button></td>':''}
+  </tr>`;
+}
+
+function updateTable(ft){
+  const data = ft.filter(t=>tableFilter==='all'||t.status===tableFilter);
+  const tbody = document.getElementById('trade-tbody');
+  tbody.innerHTML = data.length ? data.map(t=>renderRow(t)).join('') : '<tr><td colspan="9" class="empty">Hali trade yo\'q. "+ Trade qo\'shish" tugmasini bosing</td></tr>';
+}
+
+function updateJournal(){
+  const data = trades.filter(t=>journalFilter==='all'||t.market===journalFilter);
+  const tbody = document.getElementById('journal-tbody');
+  tbody.innerHTML = data.length ? data.map(t=>renderRow(t,true)).join('') : '<tr><td colspan="11" class="empty">Hali trade yo\'q</td></tr>';
+}
+
+function updateDonut(ft){
+  const wins=ft.filter(t=>t.status==='win').length;
+  const losses=ft.filter(t=>t.status==='loss').length;
+  const canvas=document.getElementById('donut');
+  const ctx=canvas.getContext('2d');
+  if(donutChart){donutChart.destroy();donutChart=null}
+  if(wins+losses===0){document.getElementById('donut-label').textContent='Hali trade yo\'q';return}
+  document.getElementById('donut-label').textContent=Math.round(wins/(wins+losses)*100)+'% win rate';
+  donutChart=new Chart(ctx,{type:'doughnut',data:{labels:['Yutish','Yutqazish'],datasets:[{data:[wins,losses],backgroundColor:['#1D9E75','#E24B4A'],borderWidth:0}]},options:{responsive:false,plugins:{legend:{display:false}},cutout:'68%'}});
+}
+
+function updatePnlBars(ft){
+  const days=['Du','Se','Ch','Pa','Ju','Sh','Ya'];
+  const pnlByDay=Array(7).fill(0);
+  const now=new Date();
+  ft.forEach(t=>{
+    if(!t.date) return;
+    const d=new Date(t.date);
+    const diff=Math.floor((now-d)/(1000*60*60*24));
+    if(diff>=0&&diff<7) pnlByDay[6-diff]+=t.pnl;
+  });
+  const max=Math.max(...pnlByDay.map(Math.abs),1);
+  const today=now.getDay();
+  const dayLabels=Array(7).fill(0).map((_,i)=>days[(today-6+i+7)%7]);
+  document.getElementById('pnl-bars').innerHTML=pnlByDay.map((v,i)=>`
+    <div class="pnl-bar-wrap">
+      <div style="flex:1;display:flex;align-items:flex-end;width:100%;justify-content:center">
+        <div class="pnl-bar" style="height:${Math.max(4,Math.abs(v)/max*68)}px;background:${v>=0?'#1D9E75':'#E24B4A'}"></div>
+      </div>
+      <div class="pnl-day-label">${dayLabels[i]}</div>
+    </div>
+  `).join('');
+}
+
+function updateAIInsights(ft){
+  if(ft.length<1) return;
+  const wins=ft.filter(t=>t.status==='win');
+  const losses=ft.filter(t=>t.status==='loss');
+  const wr=wins.length+losses.length>0?wins.length/(wins.length+losses.length)*100:0;
+  const pairWins={};
+  wins.forEach(t=>pairWins[t.pair]=(pairWins[t.pair]||0)+1);
+  const bestPair=Object.entries(pairWins).sort((a,b)=>b[1]-a[1])[0];
+  const totalPnl=ft.reduce((s,t)=>s+t.pnl,0);
+  document.getElementById('ai-insights').innerHTML=`
+    <div class="insight-item ${wr>=55?'good':'warn'}">
+      <div class="insight-label">Win rate tahlili</div>
+      <div class="insight-text">${wr>=55?'Ajoyib! '+Math.round(wr)+'% win rate — bozorni yaxshi o\'qiyapsiz':'Win rate '+Math.round(wr)+'% — risk managementni yaxshilang'}</div>
+    </div>
+    <div class="insight-item ${bestPair?'good':'info'}">
+      <div class="insight-label">Eng yaxshi juftlik</div>
+      <div class="insight-text">${bestPair?bestPair[0]+' juftligida '+bestPair[1]+' marta yutgansiz':'Ko\'proq trade qiling'}</div>
+    </div>
+    <div class="insight-item ${totalPnl>=0?'good':'warn'}">
+      <div class="insight-label">Kapital holati</div>
+      <div class="insight-text">${totalPnl>=0?'Jami +'+(totalPnl.toFixed(0))+'$ foyda':'$'+Math.abs(totalPnl).toFixed(0)+' zarar — lotni kamaytiring'}</div>
+    </div>
+  `;
+}
+
+function updateStatMetrics(){
+  const wins=trades.filter(t=>t.status==='win');
+  const losses=trades.filter(t=>t.status==='loss');
+  const all=[...wins,...losses];
+  const best=all.length?Math.max(...all.map(t=>t.pnl)):0;
+  const worst=all.length?Math.min(...all.map(t=>t.pnl)):0;
+  const avgWin=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+  const avgLoss=losses.length?losses.reduce((s,t)=>s+t.pnl,0)/losses.length:0;
+  document.getElementById('s-best').textContent='+'+best.toFixed(0)+'$';
+  document.getElementById('s-worst').textContent=worst.toFixed(0)+'$';
+  document.getElementById('s-avg-win').textContent='+'+avgWin.toFixed(0)+'$';
+  document.getElementById('s-avg-loss').textContent=avgLoss.toFixed(0)+'$';
+}
+
+function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id]}}
+
+function updateStatCharts(){
+  updateStatMetrics();
+  // Market bar
+  destroyChart('marketChart');
+  const mc={Forex:0,Crypto:0,Stock:0};
+  trades.forEach(t=>mc[t.market]=(mc[t.market]||0)+1);
+  chartInstances['marketChart']=new Chart(document.getElementById('marketChart'),{type:'bar',data:{labels:Object.keys(mc),datasets:[{data:Object.values(mc),backgroundColor:['#378ADD','#EF9F27','#1D9E75'],borderWidth:0,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#888'}}}}});
+
+  // Cumulative PnL
+  destroyChart('pnlLineChart');
+  let cum=0;
+  const pnlData=trades.slice().reverse().map(t=>{cum+=t.pnl;return parseFloat(cum.toFixed(2))});
+  chartInstances['pnlLineChart']=new Chart(document.getElementById('pnlLineChart'),{type:'line',data:{labels:trades.slice().reverse().map((_,i)=>'T'+(i+1)),datasets:[{data:pnlData,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,pointRadius:3,borderWidth:2,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'$'+v,color:'#888'}}}}});
+
+  // Pair PnL
+  destroyChart('pairChart');
+  const pairPnl={};
+  trades.forEach(t=>pairPnl[t.pair]=(pairPnl[t.pair]||0)+t.pnl);
+  const sorted=Object.entries(pairPnl).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  chartInstances['pairChart']=new Chart(document.getElementById('pairChart'),{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>parseFloat(e[1].toFixed(2))),backgroundColor:sorted.map(e=>e[1]>=0?'#1D9E75':'#E24B4A'),borderWidth:0,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'$'+v,color:'#888'},beginAtZero:true}}}});
+
+  // Long vs Short
+  destroyChart('dirChart');
+  const longs=trades.filter(t=>t.dir==='Long').length;
+  const shorts=trades.filter(t=>t.dir==='Short').length;
+  chartInstances['dirChart']=new Chart(document.getElementById('dirChart'),{type:'doughnut',data:{labels:['Long','Short'],datasets:[{data:[longs,shorts],backgroundColor:['#1D9E75','#E24B4A'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom'}},cutout:'60%'}});
+}
+
+function setMarket(m,el){
+  filterMarket=m;
+  document.querySelectorAll('.sidebar .sidebar-item').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  filterStatus=null;
+  updateAll();
+}
+
+function toggleStatus(s,el){
+  filterStatus=filterStatus===s?null:s;
+  document.querySelectorAll('.sidebar .sidebar-item').forEach(e=>{if(!e.getAttribute('onclick').includes('setMarket'))e.classList.remove('active')});
+  if(filterStatus) el.classList.add('active');
+  updateAll();
+}
+
+function filterTable(f,el){
+  tableFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  updateTable(getFiltered());
+}
+
+function filterJournal(f,el){
+  journalFilter=f;
+  document.querySelectorAll('#page-journal .filter-chip').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  updateJournal();
+}
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(id==='stats') setTimeout(updateStatCharts,100);
+  if(id==='journal') updateJournal();
+}
+
+async function askAI(){
+  const input=document.getElementById('ai-input');
+  const q=input.value.trim();
+  if(!q) return;
+  const chat=document.getElementById('ai-chat');
+  const userDiv=document.createElement('div');
+  userDiv.className='chat-msg-user';
+  userDiv.textContent=q;
+  chat.appendChild(userDiv);
+  input.value='';
+  const loadDiv=document.createElement('div');
+  loadDiv.className='chat-msg-ai';
+  loadDiv.textContent='Tahlil qilinmoqda...';
+  chat.appendChild(loadDiv);
+  chat.scrollTop=chat.scrollHeight;
+
+  const wins=trades.filter(t=>t.status==='win');
+  const losses=trades.filter(t=>t.status==='loss');
+  const summary=`Trading jurnali ma'lumotlari: ${trades.length} ta jami trade. Win rate: ${trades.length>0?Math.round(wins.length/Math.max(1,wins.length+losses.length)*100):0}%. Jami P&L: $${trades.reduce((s,t)=>s+t.pnl,0).toFixed(0)}. Juftliklar: ${[...new Set(trades.map(t=>t.pair))].join(', ')||'yo\'q'}. Bozorlar: ${[...new Set(trades.map(t=>t.market))].join(', ')||'yo\'q'}. Oxirgi 5 trade: ${trades.slice(0,5).map(t=>t.pair+' '+t.dir+' '+(t.pnl>=0?'+':'')+t.pnl+'$').join(', ')||'yo\'q'}. Savol: ${q}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,system:'Sen professional Forex va trading kouchisan. Foydalanuvchining trade ma\'lumotlariga asoslanib o\'zbek tilida qisqa, aniq va amaliy maslahat ber. Maksimal 3-4 jumla.',messages:[{role:'user',content:summary}]})});
+    const data=await res.json();
+    loadDiv.textContent=data.content?.[0]?.text||'Javob olishda xato yuz berdi.';
+  }catch(e){
+    loadDiv.textContent='Xato: '+e.message;
+  }
+  chat.scrollTop=chat.scrollHeight;
+}
+
+updateAll();
+</script>
+</body>
+</html>
